@@ -14,3 +14,8 @@ class SnakeAgent():
     def take_action(self):
         action = np.random.randint(0, 4)
         return action
+    
+    def fitness(self):
+        # Function defining how well a species performs
+        fitness = self.food_eaten - 0.1 * self.survival_time
+        return fitness
