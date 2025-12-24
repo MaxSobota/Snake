@@ -1,9 +1,8 @@
 from collections import deque
 import numpy as np
-import pygame
 
-class SnakeEnv():
-    def __init__(self, size = [12, 12], max_food = 1, render_mode = None, render_fps = 5): # Will replace with kwargs later?
+class SnakeEnv:
+    def __init__(self, size = [15, 15], max_food = 1): # Will replace with kwargs later?
         # Bounds checking
         if size[0] <= 4 or size[1] <= 4:
             raise ValueError("Error: Grid size must be at least 5x5.")
@@ -11,26 +10,12 @@ class SnakeEnv():
         if max_food <= 0:
             raise ValueError("Error: Max food must be at least 1.")
         
-        # Snake environment is a gridworld, size is defined by user
+        # Snake environment is a gridworld, size can be defined by user
         self.size = size
 
         # Number of food can be set by user too
         self.max_food = max_food
         self.food_positions = []
-
-        # Can run without a visual if needed
-        self.render_mode = render_mode
-
-        # Rendering with pygame
-        self.cell_size = 64 # Pixels per grid cell
-        self.screen = None
-        self.clock = None
-        self.render_fps = render_fps # Default 5 FPS
-
-    def close(self): 
-        # Shutdown pygame properly
-        if self.screen != None:
-            pygame.quit()
 
     def reset(self, seed = None):
         # Set seed for random numbers
@@ -47,26 +32,22 @@ class SnakeEnv():
 
         self.score = 0
         self.previous_direction = [0, 0]
-
-        self.render()
     
     def action_to_direction(self, action): # Helper function for moving the snake's head
         if action == 0: # Up
-            direction = [0, 1]
-        elif action == 1: # Down
-            direction = [0, -1]
-        elif action == 2: # Left
             direction = [-1, 0]
-        elif action == 3: # Right
+        elif action == 1: # Down
             direction = [1, 0]
+        elif action == 2: # Left
+            direction = [0, -1]
+        elif action == 3: # Right
+            direction = [0, 1]
 
         # Prevent snake moving backwards into itself
         if self.previous_direction[0] == (direction[0] * -1) and self.previous_direction[1] == (direction[1] * -1):
             direction = self.previous_direction
 
         self.previous_direction = direction
-
-        print(f"Action: {action}, direction: {direction}")
 
         return direction
         
@@ -109,7 +90,7 @@ class SnakeEnv():
             return False
 
         # If moving snake head to new location hits itself, end episode
-        if new_pos[0] in self.body or new_pos[1] in self.body:
+        if new_pos in self.body:
             return False
 
         # If not, add current head position to body
@@ -133,75 +114,4 @@ class SnakeEnv():
 
         self.update_grid()
 
-        # Render grid
-        self.render()
-
         return True
-    
-    def render(self):
-        # Use pygame to display the grid state
-        if self.render_mode == "human":
-            if self.screen == None: # Initialize screen on first render call
-                # Start pygame
-                pygame.init() 
-
-                # Initialize window
-                window_width = self.size[1] * self.cell_size
-                window_height = self.size[0] * self.cell_size
-                self.screen = pygame.display.set_mode((window_width, window_height))
-                pygame.display.set_caption("Snake")
-
-                # Start clock
-                self.clock = pygame.time.Clock()
-
-                # Set font for score
-                self.font = pygame.font.SysFont(None, 28)
-
-            # Clear screen (white background)
-            self.screen.fill((255, 255, 255))
-
-            # Score info
-            pygame.draw.rect(
-                self.screen,
-                (200, 200, 200),
-                pygame.Rect(0, 0, self.screen.get_width(), 40)
-            )
-
-            score_text = self.font.render(f"SCORE: {self.score}", True, (0, 0, 0))
-            self.screen.blit(score_text, (10, 10))
-
-            # Colors for grid objects
-            colors = {
-                0: (220, 220, 220), # Empty = light gray
-                1: (42, 165, 8), # Snake head = dark green
-                2: (59, 226, 13), # Snake body = light green
-                3: (226, 20, 13), # Food = red
-                4: (40, 40, 40) # Wall = dark grey
-            }
-
-            # Draw the grid state
-            for row in range(self.size[0]):
-                for col in range(self.size[1]):
-                    value = self.grid[row, col]
-                    color = colors[value]
-
-                    # Draw each grid square
-                    rect = pygame.Rect( 
-                        col * self.cell_size,
-                        row * self.cell_size + 40, # Moved down for score
-                        self.cell_size,
-                        self.cell_size
-                    )
-
-                    pygame.draw.rect(self.screen, color, rect)
-                    pygame.draw.rect(self.screen, (0, 0, 0), rect, 1) # Grid lines
-
-            # Quit early if we click the X
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    exit(0)
-
-            pygame.display.flip()
-
-            # Move game forward
-            self.clock.tick(self.render_fps)
