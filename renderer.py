@@ -27,7 +27,7 @@ class Renderer:
         if self.screen != None:
             pygame.quit()
 
-    def render_frame(self, grid, score):
+    def render_frame(self, grid, score, generation):
         # Initialize screen on first render call
         if self.screen == None: 
             # Start pygame
@@ -59,7 +59,9 @@ class Renderer:
         )
 
         score_text = self.font.render(f"SCORE: {score}", True, (0, 0, 0))
+        generation_text = self.font.render(f"GENERATION: {generation}", True, (0, 0, 0))
         self.screen.blit(score_text, (10, 10))
+        self.screen.blit(generation_text, (200, 10))
 
         # Colors for grid objects
         colors = {
@@ -89,8 +91,9 @@ class Renderer:
                 pygame.draw.rect(self.screen, color, rect)
                 pygame.draw.rect(self.screen, (0, 0, 0), rect, 1) # Grid lines
         
-    def render_single(self, grid, score):
-        self.render_frame(grid, score)
+    def render_single(self, grid, score, generation):
+        # TODO: Add label for current agent ID
+        self.render_frame(grid, score, generation)
 
         for event in pygame.event.get():
             # Quit early if we click the X
@@ -103,7 +106,7 @@ class Renderer:
         self.clock.tick(self.render_fps)
 
     def render_play(self, env):
-        self.render_frame(env.grid, env.score)
+        self.render_frame(env.grid, env.score, 0)
         
         for event in pygame.event.get():
             # Quit early if we click the X

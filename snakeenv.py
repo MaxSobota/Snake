@@ -2,27 +2,27 @@ from collections import deque
 import numpy as np
 
 class SnakeEnv:
-    def __init__(self, size = [15, 15], max_food = 1): # Will replace with kwargs later?
+    def __init__(self, dimensions=[15, 15], max_food=1): # Will replace with kwargs later?
         # Bounds checking
-        if size[0] <= 4 or size[1] <= 4:
+        if dimensions[0] <= 4 or dimensions[1] <= 4:
             raise ValueError("Error: Grid size must be at least 5x5.")
         
         if max_food <= 0:
             raise ValueError("Error: Max food must be at least 1.")
         
         # Snake environment is a gridworld, size can be defined by user
-        self.size = size
+        self.dimensions = dimensions
 
         # Number of food can be set by user too
         self.max_food = max_food
         self.food_positions = []
 
-    def reset(self, seed = None):
-        # Set seed for random numbers
-        np.random.seed(seed)
-
-        self.head_pos = [self.size[0] // 2, self.size[1] // 2]
+    def reset(self):
+        self.head_pos = [self.dimensions[0] // 2, self.dimensions[1] // 2]
         self.body = deque()
+
+        self.food_positions = []
+        self.steps = 0
 
         # Remake the grid state
         self.update_grid()
@@ -53,7 +53,7 @@ class SnakeEnv:
         
     def update_grid(self):
         # Initialize empty grid
-        self.grid = np.zeros((self.size[0], self.size[1]))
+        self.grid = np.zeros((self.dimensions[0], self.dimensions[1]))
 
         # Add walls
         self.grid[0, :] = 4
@@ -80,6 +80,12 @@ class SnakeEnv:
             self.food_positions.append([row, col])
 
     def step(self, action):
+        self.steps += 1
+
+        # Timer to stop going in circles
+        if self.steps >= 100:
+            return False
+
         action_pos = self.action_to_direction(action)
 
         # Get new head position
@@ -104,6 +110,9 @@ class SnakeEnv:
             self.food_positions.remove(self.head_pos)
             self.spawn_food(1)
             self.score += 1
+
+            # Reset timer
+            self.steps = 0
 
             # Check for win condition
             if self.score == len(self.grid) - 1:
