@@ -19,7 +19,7 @@ Core loop:
 """
 
 def evaluate(num_agents, num_episodes, num_offspring, env_dimensions, render_mode):
-    renderer = Renderer(render_mode, render_fps=30)
+    renderer = Renderer(render_mode, render_fps=5)
 
     # Without wall padding
     env_size = (env_dimensions[0] - 2) * (env_dimensions[1] - 2)
@@ -44,6 +44,8 @@ def evaluate(num_agents, num_episodes, num_offspring, env_dimensions, render_mod
         while(True):
             if render_mode == "single":
                 renderer.render_single(pairs[best_agent].grid, pairs[best_agent].score, gen)
+            elif render_mode == "overlay":
+                renderer.render_overlay(pairs, gen)
             
             # Move to next episode when all agents die
             if len(alive_agents) == 0:
@@ -89,13 +91,13 @@ def play(env_dimensions, max_food):
         pass
 
 if __name__ == "__main__":
-    # render_mode = input("Enter render mode (human, single, play, none): ")
+    # render_mode = input("Enter render mode (human, single, overlay, play, none): ")
 
-    # if render_mode not in ["human", "single", "play"]:
+    # if render_mode not in ["human", "single", "overlay", "play"]:
     #     print("Render mode set to none.")
     #     render_mode = None
 
-    render_mode = "single"
+    render_mode = "overlay"
 
     # # Grid size
     # try:
@@ -139,7 +141,7 @@ if __name__ == "__main__":
         #     print("Number of agents should be >= 1.")
         #     exit(1)
 
-        num_agents = 50
+        num_agents = 5
 
         # How many iterations to train
         # try:
@@ -163,7 +165,7 @@ if __name__ == "__main__":
         # if num_episodes <= 0:
         #     print("Number of offspring should be >= 1.")
         #     exit(1)
-        num_offspring = 25
+        num_offspring = 3
 
         optimal_agent = evaluate(num_agents, num_episodes, num_offspring, env_dimensions, render_mode)
     

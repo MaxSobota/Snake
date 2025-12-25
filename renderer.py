@@ -1,4 +1,5 @@
 import pygame
+import numpy as np
 """
 TODO: Add render modes
 - human
@@ -7,8 +8,6 @@ TODO: Add render modes
 - none
 
 TODO: Fix window size
-TODO: Fix death logic
-
 """
 
 # A helper class which renders the game environment
@@ -94,6 +93,102 @@ class Renderer:
     def render_single(self, grid, score, generation):
         # TODO: Add label for current agent ID
         self.render_frame(grid, score, generation)
+
+        for event in pygame.event.get():
+            # Quit early if we click the X
+            if event.type == pygame.QUIT:
+                self.close()
+            
+        pygame.display.flip()
+
+        # Move game forward
+        self.clock.tick(self.render_fps)
+
+    # Renders all agents on the same grid
+    def render_overlay(self, pairs, gen):
+        # Initialize screen on first render call
+        if self.screen == None: 
+            # Start pygame
+            pygame.init() 
+
+            # Initialize window
+            window_width = 800
+            window_height = 850
+            self.screen = pygame.display.set_mode((window_width, window_height))
+            pygame.display.set_caption(f"Snake - {self.render_mode}")
+
+            # Start clock
+            self.clock = pygame.time.Clock()
+
+            # Set font for score
+            self.font = pygame.font.SysFont(None, 28)
+
+        # Get grid dimensions
+        self.size = list(pairs.values())[0].grid.shape
+
+        # Clear screen (white background)
+        self.screen.fill((255, 255, 255))
+
+        # Score info
+        pygame.draw.rect(
+            self.screen,
+            (200, 200, 200),
+            pygame.Rect(0, 0, self.screen.get_width(), 50)
+        )
+
+        # Get highest score agent
+        score = max(a.score for a in pairs.keys())
+
+        score_text = self.font.render(f"HIGHEST SCORE: {score}", True, (0, 0, 0))
+        generation_text = self.font.render(f"GENERATION: {gen}", True, (0, 0, 0))
+        self.screen.blit(score_text, (10, 10))
+        self.screen.blit(generation_text, (200, 10))
+
+        # Heatmaps
+        snake_map = np.zeros(self.size, dtype=np.float32)
+        food_map = np.zeros(self.size, dtype=np.float32)
+
+        # Walls don't change
+        wall_mask = (list(pairs.values())[0].grid == 4)
+        empty_mask = (list(pairs.values())[0].grid == 0)
+
+        # Add grid values to heatmap
+        alive = 0
+        for agent in pairs.keys():
+            if agent.alive:
+                snake_map += ((pairs[agent].grid == 1) | (pairs[agent].grid == 2))
+                food_map += (pairs[agent].grid == 3)
+                alive += 1
+
+        # Normalize color intensity so any number of agents works
+        snake_map /= max(1, alive)
+        food_map /= max(1, alive)
+
+        cell_size = min(800 // self.size[1], 800 // self.size[0])
+
+        # Draw the grid state
+        for row in range(self.size[0]):
+            for col in range(self.size[1]):
+                if wall_mask[row, col]:
+                    color = (40, 40, 40)
+                elif empty_mask[row, col]:
+                    color = (255, 255, 255)
+                else:
+                    # Color scales with occupancy
+                    green = int(255 * snake_map[row, col])
+                    red = int(255 * food_map[row, col])
+                    color = (red, green, 0)
+
+                # Draw each grid square to fit inside screen
+                rect = pygame.Rect( 
+                    col * cell_size,
+                    row * cell_size + 50, # Moved down for score
+                    cell_size,
+                    cell_size
+                )
+
+                pygame.draw.rect(self.screen, color, rect)
+                pygame.draw.rect(self.screen, (0, 0, 0), rect, 1) # Grid lines
 
         for event in pygame.event.get():
             # Quit early if we click the X
