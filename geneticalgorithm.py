@@ -17,7 +17,7 @@ def mutate(child_weights):
     # Add some random noise 
     mutated_weights = child_weights.copy()
     mask = np.random.rand(len(mutated_weights)) < 0.1
-    mutated_weights[mask] += np.random.normal(0, 0.05, size=np.sum(mask))
+    mutated_weights[mask] += np.random.normal(0, 1, size=np.sum(mask))
     
     return mutated_weights
 
@@ -29,10 +29,16 @@ def softmax(scores):
     # Softmax equation
     return stabilized / np.sum(stabilized) 
 
+# Fitness of agent is based on their score/steps
+def fitness(agent):
+    total_fitness = agent.score# + (agent.score / agent.steps)
+
+    return total_fitness
+
 # Creates offspring from the current agents
 def reproduce(population, num_offspring):
     # Take parents using probability based on fitness (score)
-    scores = np.array([agent.score for agent in population])
+    scores = np.array([fitness(agent) for agent in population])
 
     # Get probability distribution from scores
     probabilities = softmax(scores)
@@ -43,8 +49,12 @@ def reproduce(population, num_offspring):
     # Create offspring
     for _ in range(num_offspring):
         # Drawn with replacement, this can result in cloning, but that might be beneficial
-        parent_a = np.random.choice(population, p=probabilities)
-        parent_b = np.random.choice(population, p=probabilities)
+        # parent_a = np.random.choice(population, p=probabilities)
+        # parent_b = np.random.choice(population, p=probabilities)
+        parent_a = population[np.argmax([a.score for a in population])]
+        pop = population.copy()
+        pop.remove(parent_a)
+        parent_b = pop[np.argmax([a.score for a in population])]
         
         # Create offspring based on parents
         child_weights = genetic_operator(parent_a, parent_b)

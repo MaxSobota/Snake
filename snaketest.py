@@ -21,13 +21,10 @@ Core loop:
 def evaluate(num_agents, num_episodes, num_offspring, env_dimensions, render_mode):
     renderer = Renderer(render_mode, render_fps=60)
 
-    # Without wall padding
-    env_size = (env_dimensions[0] - 2) * (env_dimensions[1] - 2)
-
     # Agent/Environment pairs
     pairs = {}
     for _ in range(num_agents):
-        pairs[SnakeAgent(num_inputs=env_size)] = SnakeEnv(dimensions=env_dimensions)
+        pairs[SnakeAgent()] = SnakeEnv(dimensions=env_dimensions)
 
     for gen in range(num_episodes):
         # Put agents into a list so we can remove them one by one
@@ -38,6 +35,7 @@ def evaluate(num_agents, num_episodes, num_offspring, env_dimensions, render_mod
             env.reset()
             agent.score = 0
             agent.alive = True
+            agent.steps = 0
 
         # All agents equal at the start
         best_agent = agents[0]
@@ -63,18 +61,15 @@ def evaluate(num_agents, num_episodes, num_offspring, env_dimensions, render_mod
                 if not agent.alive:
                     continue
 
-                # Pass grid without exterior walls
-                unpadded_grid = pairs[agent].grid[1:-1, 1:-1]
-
                 # Each agent takes an action according to their gene policy
-                action = agent.take_action(unpadded_grid)
+                action = agent.take_action(pairs[agent])
 
                 # Update agent's info
                 agent.alive = pairs[agent].step(action)
                 agent.score = pairs[agent].score
 
                 # Agent beat the game, and therefore has the optimal policy
-                if agent.score == (env_dimensions[0] - 1) * (env_dimensions[1] - 1):
+                if agent.score == (env_dimensions[0] - 2) * (env_dimensions[1] - 2):
                     return agent
                 
                 # Best agent = highest score while still alive
@@ -103,7 +98,7 @@ if __name__ == "__main__":
     #     print("Render mode set to none.")
     #     render_mode = None
 
-    render_mode = "overlay"
+    render_mode = "single"
 
     # # Grid size
     # try:
@@ -119,7 +114,7 @@ if __name__ == "__main__":
     #     print("Grid should be at least 5x5.")
     #     exit(1)
 
-    env_dimensions = [12, 12]
+    env_dimensions = [15, 15]
 
     # # Grid size
     # try:
@@ -147,7 +142,7 @@ if __name__ == "__main__":
         #     print("Number of agents should be >= 1.")
         #     exit(1)
 
-        num_agents = 2000
+        num_agents = 100
 
         # How many iterations to train
         # try:
@@ -171,7 +166,7 @@ if __name__ == "__main__":
         # if num_episodes <= 0:
         #     print("Number of offspring should be >= 1.")
         #     exit(1)
-        num_offspring = 1750
+        num_offspring = 98
 
         optimal_agent = evaluate(num_agents, num_episodes, num_offspring, env_dimensions, render_mode)
     

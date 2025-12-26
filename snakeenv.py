@@ -31,20 +31,14 @@ class SnakeEnv:
         self.spawn_food(self.max_food)
 
         self.score = 0
-        self.previous_direction = [0, 0]
+        self.previous_direction = [-1, 0]
     
     def action_to_direction(self, action): # Helper function for moving the snake's head
-        if action == 0: # Up
-            direction = [-1, 0]
-        elif action == 1: # Down
-            direction = [1, 0]
-        elif action == 2: # Left
-            direction = [0, -1]
-        elif action == 3: # Right
-            direction = [0, 1]
-
-        # Prevent snake moving backwards into itself
-        if self.previous_direction[0] == (direction[0] * -1) and self.previous_direction[1] == (direction[1] * -1):
+        if action == 0: # Turn left
+            direction = [self.previous_direction[1], -self.previous_direction[0]] 
+        elif action == 1: # Turn right
+            direction = [-self.previous_direction[1], self.previous_direction[0]] 
+        else: # Go straight
             direction = self.previous_direction
 
         self.previous_direction = direction
@@ -85,7 +79,7 @@ class SnakeEnv:
         # Timer to stop going in circles, longest dimension + some offset
         if self.steps >= max(self.grid.shape[0], self.grid.shape[1]) + 20:
             return False
-
+        
         action_pos = self.action_to_direction(action)
 
         # Get new head position
