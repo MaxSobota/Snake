@@ -82,8 +82,8 @@ class SnakeEnv:
     def step(self, action):
         self.steps += 1
 
-        # Timer to stop going in circles
-        if self.steps >= 100:
+        # Timer to stop going in circles, longest dimension + some offset
+        if self.steps >= max(self.grid.shape[0], self.grid.shape[1]) + 20:
             return False
 
         action_pos = self.action_to_direction(action)

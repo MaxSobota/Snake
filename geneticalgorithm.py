@@ -14,16 +14,7 @@ def genetic_operator(parent_a, parent_b):
 
 # Randomly alters an agent's weights
 def mutate(child_weights):
-    mutated_weights = child_weights.copy()
-
-    # # Choose between 0 and 10 random weights to mutate
-    # amount = 9 # np.random.randint(0, 11)
-    # random_indexes = np.random.choice(len(mutated_weights), size=amount, replace=False)
-    
-    # # Randomize weights slightly by adding a small number
-    # for index in random_indexes:
-    #     mutated_weights[index] += (np.random.randint(-10, 10) * 0.05)
-
+    # Add some random noise 
     mutated_weights = child_weights.copy()
     mask = np.random.rand(len(mutated_weights)) < 0.1
     mutated_weights[mask] += np.random.normal(0, 0.05, size=np.sum(mask))

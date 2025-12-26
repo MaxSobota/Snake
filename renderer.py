@@ -123,8 +123,10 @@ class Renderer:
             # Set font for score
             self.font = pygame.font.SysFont(None, 28)
 
-        # Get grid dimensions
-        self.size = list(pairs.values())[0].grid.shape
+        # Get grid dimensions using a sample grid, they all have the same dimension
+        sample_env = list(pairs.values())[0]
+        rows, cols = sample_env.grid.shape
+        self.size = (rows, cols)
 
         # Clear screen (white background)
         self.screen.fill((255, 255, 255))
@@ -149,20 +151,25 @@ class Renderer:
         food_map = np.zeros(self.size, dtype=np.float32)
 
         # Walls don't change
-        wall_mask = (list(pairs.values())[0].grid == 4)
-        empty_mask = (list(pairs.values())[0].grid == 0)
+        wall_mask = (sample_env.grid == 4)
 
         # Add grid values to heatmap
         alive = 0
-        for agent in pairs.keys():
-            if agent.alive:
-                snake_map += ((pairs[agent].grid == 1) | (pairs[agent].grid == 2))
-                food_map += (pairs[agent].grid == 3)
-                alive += 1
+        for agent, env in pairs.items():
+            if not agent.alive:
+                continue
 
+            alive += 1
+            grid = env.grid
+
+            # Add occurrences to heatmaps
+            snake_map += (grid == 1) | (grid == 2)
+            food_map += grid == 3
+            
         # Normalize color intensity so any number of agents works
-        snake_map /= max(1, alive)
-        food_map /= max(1, alive)
+        if alive > 0:
+            snake_map /= alive
+            food_map /= alive
 
         cell_size = min(800 // self.size[1], 800 // self.size[0])
 
@@ -171,13 +178,44 @@ class Renderer:
             for col in range(self.size[1]):
                 if wall_mask[row, col]:
                     color = (40, 40, 40)
-                elif empty_mask[row, col]:
-                    color = (255, 255, 255)
                 else:
-                    # Color scales with occupancy
-                    green = int(255 * snake_map[row, col])
-                    red = int(255 * food_map[row, col])
-                    color = (red, green, 0)
+                    # Clip the heatmaps to make sure they're between 0 and 1
+                    snake_i = np.clip(snake_map[row, col], 0, 1)
+                    food_i = np.clip(food_map[row, col], 0, 1)
+
+                    # Combined color intensity (presence of food, snake, or both)
+                    presence = max(snake_i, food_i)
+
+                    if presence == 0:
+                        # Empty squares = white
+                        color = (255, 255, 255)
+                    else:
+                        # Enforce a minimum color strength (40%) to make it look better
+                        min_i = 0.40
+                        
+                        # Color intensity based on how many things in the square
+                        intensity = min_i + (1.0 - min_i) * presence
+
+                        # Mix the colors of the objects on the square
+                        total = snake_i + food_i
+                        red_ratio = food_i / total
+                        green_ratio = snake_i / total
+
+                        target_r = int(255 * red_ratio)
+                        target_g = int(255 * green_ratio)
+                        target_b = 0
+
+                        # Blend colors to white by intensity
+                        r_col = int(255 - (255 - target_r) * intensity)
+                        g_col = int(255 - (255 - target_g) * intensity)
+                        b_col = int(255 - (255 - target_b) * intensity)
+
+                        # Clip to valid range (0 to 255)
+                        r_col = int(np.clip(r_col, 0, 255))
+                        g_col = int(np.clip(g_col, 0, 255))
+                        b_col = int(np.clip(b_col, 0, 255))
+
+                        color = (r_col, g_col, b_col)
 
                 # Draw each grid square to fit inside screen
                 rect = pygame.Rect( 

@@ -19,7 +19,7 @@ Core loop:
 """
 
 def evaluate(num_agents, num_episodes, num_offspring, env_dimensions, render_mode):
-    renderer = Renderer(render_mode, render_fps=5)
+    renderer = Renderer(render_mode, render_fps=60)
 
     # Without wall padding
     env_size = (env_dimensions[0] - 2) * (env_dimensions[1] - 2)
@@ -32,27 +32,37 @@ def evaluate(num_agents, num_episodes, num_offspring, env_dimensions, render_mod
     for gen in range(num_episodes):
         # Put agents into a list so we can remove them one by one
         agents = list(pairs.keys())
-        alive_agents = agents.copy()
         
-        # Reset each agent's environment
-        for env in pairs.values():
+        # Reset each agent's environment and values
+        for agent, env in pairs.items():
             env.reset()
+            agent.score = 0
+            agent.alive = True
 
         # All agents equal at the start
         best_agent = agents[0]
 
         while(True):
             if render_mode == "single":
-                renderer.render_single(pairs[best_agent].grid, pairs[best_agent].score, gen)
+                renderer.render_single(list(pairs.values())[0].grid, list(pairs.keys())[0].score, gen)
             elif render_mode == "overlay":
                 renderer.render_overlay(pairs, gen)
+            elif render_mode == "best":
+                renderer.render_single(pairs[best_agent].grid, pairs[best_agent].score, gen)
             
             # Move to next episode when all agents die
-            if len(alive_agents) == 0:
+            count = len(agents)
+            for agent in agents:
+                if not agent.alive:
+                    count -= 1
+            if count == 0:
                 break
 
-            # Copy the agents list so we can remove agents while game is running
-            for agent in alive_agents:
+            for agent in agents:
+                # Stop agent playing if dead
+                if not agent.alive:
+                    continue
+
                 # Pass grid without exterior walls
                 unpadded_grid = pairs[agent].grid[1:-1, 1:-1]
 
@@ -67,10 +77,6 @@ def evaluate(num_agents, num_episodes, num_offspring, env_dimensions, render_mod
                 if agent.score == (env_dimensions[0] - 1) * (env_dimensions[1] - 1):
                     return agent
                 
-                # Stop agent playing if dead
-                if not agent.alive:
-                    alive_agents.remove(agent)
-
                 # Best agent = highest score while still alive
                 if agent.score > best_agent.score or not best_agent.alive:
                     best_agent = agent
@@ -113,7 +119,7 @@ if __name__ == "__main__":
     #     print("Grid should be at least 5x5.")
     #     exit(1)
 
-    env_dimensions = [10, 10]
+    env_dimensions = [12, 12]
 
     # # Grid size
     # try:
@@ -141,7 +147,7 @@ if __name__ == "__main__":
         #     print("Number of agents should be >= 1.")
         #     exit(1)
 
-        num_agents = 5
+        num_agents = 2000
 
         # How many iterations to train
         # try:
@@ -165,7 +171,7 @@ if __name__ == "__main__":
         # if num_episodes <= 0:
         #     print("Number of offspring should be >= 1.")
         #     exit(1)
-        num_offspring = 3
+        num_offspring = 1750
 
         optimal_agent = evaluate(num_agents, num_episodes, num_offspring, env_dimensions, render_mode)
     
