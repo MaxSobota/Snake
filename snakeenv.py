@@ -22,7 +22,8 @@ class SnakeEnv:
         self.body = deque()
 
         self.food_positions = []
-        self.steps = 0
+        self.steps_without_food = 0
+        self.score = 0
 
         # Remake the grid state
         self.update_grid()
@@ -30,7 +31,6 @@ class SnakeEnv:
         # Spawn initial food
         self.spawn_food(self.max_food)
 
-        self.score = 0
         self.previous_direction = [-1, 0]
     
     def action_to_direction(self, action): # Helper function for moving the snake's head
@@ -74,10 +74,10 @@ class SnakeEnv:
             self.food_positions.append([row, col])
 
     def step(self, action):
-        self.steps += 1
+        self.steps_without_food += 1
 
-        # Timer to stop going in circles, longest dimension + some offset
-        if self.steps >= max(self.grid.shape[0], self.grid.shape[1]) + 20:
+        # Timer to stop going in circles
+        if self.steps_without_food >= 100:
             return False
         
         action_pos = self.action_to_direction(action)
@@ -106,11 +106,8 @@ class SnakeEnv:
             self.score += 1
 
             # Reset timer
-            self.steps = 0
+            self.steps_without_food = 0
 
-            # Check for win condition
-            if self.score == len(self.grid) - 1:
-                exit(0)
         else:
             # Remove last body segment location
             self.body.pop()

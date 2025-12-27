@@ -1,5 +1,5 @@
 import numpy as np
-
+from neuralnetwork import NeuralNetwork
 # The neural network which powers each snake's decision making
 
 """
@@ -10,21 +10,20 @@ NN setup:
 """
 
 class SnakeAgent:
-    def __init__(self):
-        self.init_network()
+    def __init__(self, brain=None):
+        neurons = [22, 40, 22, 3]
+        activations = ["relu", "relu", "softmax"]
 
-    # Hidden layer activation function
-    def relu(self, input):
-        return np.maximum(0, input)
+        if not brain:
+            self.brain = NeuralNetwork(len(neurons), neurons, activations)
+        else:
+            self.brain = brain
 
-    # Output layer activation function
-    def softmax(self, scores):
-        stabilized = np.exp(scores - np.max(scores))
-        return stabilized / np.sum(stabilized) 
-
-    # Get the outputs for the layer by dot product and activation function on inputs/weights
-    def fire_neurons(self, inputs, weights, activation):
-        return activation(inputs @ weights)
+        # Environment stuff
+        self.score = 0
+        self.alive = True
+        self.steps = 0
+        self.steps_without_food = 0
     
     # Helper which returns T/F whether the item is the closest thing to the snake head
     def first_found(self, grid, row, col, direction, item):
@@ -39,16 +38,16 @@ class SnakeAgent:
             val = grid[i, j]
 
             # If not an empty square
-            if val != 0:
-                if val == 4:
+            if val == item:
+                if item != 4:
                     return distance
-                return val == item
+                return 1.0
             i += drow
             j += dcol
             distance += 1
 
         # Not the item we're looking for
-        return False
+        return 0.0
     
     # Takes in grid state and returns vision inputs
     def deconstruct_grid(self, env):
@@ -69,65 +68,51 @@ class SnakeAgent:
         direction = env.previous_direction
 
         # 8 vision * (wall next to head y/n, food y/n, body y/n) + 4 directions
-        inputs = np.zeros((28, ))
+        inputs = np.zeros((22, ), dtype=float)
 
         # Once for each compass direction
         for i, dir in enumerate(compass):
             inputs[i] = self.first_found(grid, head_row, head_col, dir, 3) # Food
-            inputs[i + 8] = self.first_found(grid, head_row, head_col, dir, 2) # Body
-            inputs[i + 16] = self.first_found(grid, head_row, head_col, dir, 4) # Wall
+            inputs[i + 8] = self.first_found(grid, head_row, head_col, dir, 4) # Wall
+
+        dr = env.food_positions[0][0] - head_row
+        dc = env.food_positions[0][1] - head_col
+
+        # Normalize to -1, 0, or 1
+        dr = 0 if dr == 0 else (1 if dr > 0 else -1)
+        dc = 0 if dc == 0 else (1 if dc > 0 else -1)
+
+        inputs[16] = dr
+        inputs[17] = dc
+
 
         # Direction neurons (N, E, S, W)
         if direction == [-1, 0]: # North
-            correct = 24
+            correct = 18
         elif direction == [0, 1]: # East
-            correct = 25
-        elif direction == [-1, 0]: # South
-            correct = 26
+            correct = 19
+        elif direction == [1, 0]: # South
+            correct = 20
         else: # West
-            correct = 27
+            correct = 21
         inputs[correct] = 1
-
+        
         return inputs
 
     # Make a prediction using the network
     def take_action(self, env):
         inputs = self.deconstruct_grid(env)
 
-        # Multiply inputs with input neuron weights and use activation function to get inputs for hidden layer
-        hiddens_1 = self.fire_neurons(inputs, self.hidden_weights_1, self.relu)
-
-        hiddens_2 = self.fire_neurons(hiddens_1, self.hidden_weights_2, self.relu)
-
-        # Multiply inputs with hidden neuron weights
-        outputs = self.fire_neurons(hiddens_2, self.output_weights, self.softmax)
+        outputs = self.brain.predict(inputs)
 
         action = np.argmax(outputs)
 
         self.steps += 1
 
         return action
-    
-    def init_network(self):
-        # Randomly initialize weights
-        # Inputs -> Hidden
-        self.hidden_weights_1 = np.random.randn(28, 20) * 0.1
-        self.hidden_weights_2 = np.random.randn(20, 10) * 0.1
-        # Hidden -> Output
-        self.output_weights = np.random.randn(10, 3) * 0.1
-
-        self.weights = np.concatenate([self.hidden_weights_1.ravel(), self.hidden_weights_2.ravel(), self.output_weights.ravel()])
-
-        # Environment stuff
-        self.score = 0
-        self.alive = True
-        self.steps = 0
 
     # Sets the agent's weights to the new weights
     def set_weights(self, weights):
-        self.weights = weights
-        
-        # Un-flatten weights (lol)
-        self.hidden_weights_1 = weights[:self.hidden_weights_1.size].reshape(self.hidden_weights_1.shape[0], self.hidden_weights_1.shape[1])
-        self.hidden_weights_2 = weights[self.hidden_weights_1.size:self.hidden_weights_1.size + self.hidden_weights_2.size].reshape(self.hidden_weights_2.shape[0], self.hidden_weights_2.shape[1])
-        self.output_weights = weights[self.hidden_weights_1.size + self.hidden_weights_2.size:].reshape(self.output_weights.shape[0], self.output_weights.shape[1])
+        # Convert from list of np arrays to each layer
+        for i in range(len(weights)):
+            self.brain.layers[i] = weights[i]
